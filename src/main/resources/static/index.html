@@ -348,7 +348,7 @@ function logSeparator(char = '─') { logLines.push({ ts: '', level: 'sep', part
 
 function renderLog() {
     const el = document.getElementById('log-content');
-    const filtered = logFilter === 'all' ? logLines : logLines.filter(l => l.level === logFilter || l.level === 'sep');
+    const filtered = logFilter === 'all' ? logLines : logLines.filter(l => l.level === logFilter);
     el.innerHTML = filtered.map(l => {
         if (l.level === 'sep') return '<div class="log-line separator"><span class="l-msg">' + esc(l.parts[0]?.t||'') + '</span></div>';
         const msgHtml = l.parts.map(p => typeof p === 'string' ? esc(p) : '<span class="' + (p.c||'') + '">' + esc(p.t) + '</span>').join('');
