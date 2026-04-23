@@ -1,0 +1,43 @@
+# ── render.yaml — Render Blueprint (Infrastructure as Code) ──
+# Deploy: connect your GitHub repo on render.com → it reads this file automatically.
+
+services:
+  # ── Spring Boot App ─────────────────────────────────
+  - type: web
+    name: car-pooling-service
+    runtime: docker
+    plan: free
+    region: frankfurt           # EU — change to oregon if you prefer US
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: carpooling-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: carpooling-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: carpooling-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: carpooling-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: carpooling-db
+          property: password
+      - key: JAVA_OPTS
+        value: -Xmx256m -Xms128m
+    healthCheckPath: /api/v1/status
+
+databases:
+  # ── PostgreSQL ──────────────────────────────────────
+  - name: carpooling-db
+    plan: free
+    region: frankfurt
+    databaseName: carpooling
+    user: carpooling

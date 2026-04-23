@@ -1,0 +1,624 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 Car Pooling Service</title>
+    <style>
+        :root {
+            --bg: #0f172a; --card: #1e293b; --border: #334155;
+            --accent: #38bdf8; --accent2: #818cf8; --green: #34d399;
+            --red: #f87171; --orange: #fb923c; --yellow: #fbbf24;
+            --text: #e2e8f0; --muted: #94a3b8;
+            --seat-empty: #334155; --seat-taken: #38bdf8; --log-bg: #0c1222;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg); color: var(--text);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: .75rem 2rem; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+        }
+        header h1 { font-size: 1.3rem; display: flex; align-items: center; gap: .5rem; }
+        header h1 span { font-size: 1.5rem; }
+        .header-right { display: flex; align-items: center; gap: 1rem; }
+        #status-badge {
+            padding: .3rem .9rem; border-radius: 9999px; font-size: .75rem; font-weight: 600;
+            display: flex; align-items: center; gap: .4rem;
+        }
+        #status-badge.online  { background: #064e3b; color: #6ee7b7; }
+        #status-badge.offline { background: #7f1d1d; color: #fca5a5; }
+        #status-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
+        #status-badge.online .dot  { background: #34d399; box-shadow: 0 0 6px #34d399; }
+        #status-badge.offline .dot { background: #f87171; }
+        .lang-selector {
+            display: flex; gap: 2px; background: var(--bg); border-radius: 8px; padding: 2px;
+            border: 1px solid var(--border);
+        }
+        .lang-btn {
+            padding: .25rem .5rem; border: none; border-radius: 6px; cursor: pointer;
+            font-size: .75rem; font-weight: 600; background: transparent; color: var(--muted);
+            transition: all .2s; line-height: 1;
+        }
+        .lang-btn:hover { color: var(--text); }
+        .lang-btn.active { background: var(--accent); color: #0f172a; }
+        .top-area {
+            display: grid; grid-template-columns: 320px 1fr; gap: 1.25rem;
+            padding: 1.25rem 2rem; flex-shrink: 0; min-height: 0;
+        }
+        .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+        .panel h2 {
+            font-size: .85rem; margin-bottom: .75rem; display: flex; align-items: center; gap: .4rem;
+            color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600;
+        }
+        .sidebar { display: flex; flex-direction: column; gap: .75rem; }
+        label { display: block; font-size: .75rem; color: var(--muted); margin-bottom: .25rem; }
+        input, textarea {
+            width: 100%; padding: .45rem .65rem; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); font-size: .85rem; outline: none; transition: border-color .2s;
+        }
+        input:focus, textarea:focus { border-color: var(--accent); }
+        textarea { resize: vertical; min-height: 60px; font-family: 'Cascadia Code','Consolas',monospace; font-size: .75rem; }
+        .form-row { margin-bottom: .6rem; }
+        .form-row-inline { display: flex; gap: .5rem; }
+        .form-row-inline > div { flex: 1; }
+        button {
+            padding: .5rem 1rem; border: none; border-radius: 8px; font-weight: 600; font-size: .8rem;
+            cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: .35rem;
+        }
+        button:active { transform: scale(.97); }
+        .btn-primary { background: var(--accent); color: #0f172a; }
+        .btn-primary:hover { background: #7dd3fc; }
+        .btn-purple  { background: var(--accent2); color: #fff; }
+        .btn-purple:hover  { background: #a5b4fc; }
+        .btn-green   { background: var(--green); color: #0f172a; }
+        .btn-green:hover   { background: #6ee7b7; }
+        .btn-orange  { background: var(--orange); color: #0f172a; }
+        .btn-orange:hover  { background: #fdba74; }
+        .main-area { display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; }
+        .stat-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+            padding: .7rem 1rem; text-align: center;
+        }
+        .stat-card .value { font-size: 1.6rem; font-weight: 700; }
+        .stat-card .label { font-size: .7rem; color: var(--muted); margin-top: .1rem; }
+        .stat-card.blue .value { color: var(--accent); }
+        .stat-card.purple .value { color: var(--accent2); }
+        .stat-card.green .value { color: var(--green); }
+        .stat-card.orange .value { color: var(--orange); }
+        .fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .75rem; }
+        .car-card {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+            padding: .8rem; text-align: center; transition: border-color .3s;
+        }
+        .car-card:hover { border-color: var(--accent); }
+        .car-card .car-icon { font-size: 1.6rem; margin-bottom: .2rem; }
+        .car-card .car-id { font-weight: 700; font-size: .85rem; }
+        .car-card .seats-visual { display: flex; justify-content: center; gap: 4px; margin: .5rem 0 .25rem; }
+        .seat { width: 16px; height: 16px; border-radius: 4px; transition: background .3s; }
+        .seat.empty { background: var(--seat-empty); }
+        .seat.taken { background: var(--seat-taken); box-shadow: 0 0 6px rgba(56,189,248,.4); }
+        .car-card .car-info { font-size: .65rem; color: var(--muted); }
+        .queue-list { display: flex; flex-wrap: wrap; gap: .4rem; }
+        .queue-item {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: .4rem .7rem; font-size: .75rem; display: flex; align-items: center; gap: .35rem;
+        }
+        .people-dots { display: flex; gap: 3px; }
+        .people-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--orange); }
+        .empty-state { text-align: center; color: var(--muted); padding: 1.5rem; font-size: .85rem; }
+        .resize-handle {
+            height: 6px; background: var(--border); cursor: ns-resize; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; transition: background .2s;
+        }
+        .resize-handle:hover { background: var(--accent); }
+        .resize-handle::after { content: ''; width: 40px; height: 3px; background: var(--muted); border-radius: 2px; }
+        .log-section {
+            flex: 1; display: flex; flex-direction: column; min-height: 180px;
+            background: var(--log-bg); border-top: 1px solid var(--border);
+        }
+        .log-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: .5rem 1.5rem; background: #111827; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .log-header h2 {
+            font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em;
+            font-weight: 600; display: flex; align-items: center; gap: .4rem; margin: 0;
+        }
+        .log-header .log-actions { display: flex; gap: .5rem; align-items: center; }
+        .log-header .log-count {
+            font-size: .7rem; color: var(--muted); background: var(--bg); padding: .15rem .5rem; border-radius: 4px;
+        }
+        .log-header button {
+            padding: .3rem .6rem; font-size: .7rem; background: var(--border); color: var(--muted); border-radius: 6px;
+        }
+        .log-header button:hover { background: #475569; color: var(--text); }
+        .log-filters { display: flex; gap: .3rem; }
+        .filter-pill {
+            padding: .2rem .55rem; border-radius: 4px; font-size: .65rem; font-weight: 600;
+            cursor: pointer; border: 1px solid transparent; transition: all .2s; text-transform: uppercase;
+        }
+        .filter-pill.active { border-color: currentColor; }
+        .filter-pill[data-level="all"]   { color: var(--text); background: #1f2937; }
+        .filter-pill[data-level="info"]  { color: var(--accent); background: #0c2d48; }
+        .filter-pill[data-level="warn"]  { color: var(--yellow); background: #422006; }
+        .filter-pill[data-level="error"] { color: var(--red); background: #450a0a; }
+        .filter-pill[data-level="debug"] { color: var(--muted); background: #1a1a2e; }
+        #log-content {
+            flex: 1; overflow-y: auto; padding: .5rem 0;
+            font-family: 'Cascadia Code','Consolas','Courier New',monospace; font-size: .78rem; line-height: 1.5;
+        }
+        #log-content::-webkit-scrollbar { width: 8px; }
+        #log-content::-webkit-scrollbar-track { background: var(--log-bg); }
+        #log-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .log-line { padding: .1rem 1.5rem; display: flex; gap: 0; white-space: pre; transition: background .15s; }
+        .log-line:hover { background: rgba(255,255,255,.03); }
+        .log-line .l-ts { color: #4b5563; min-width: 90px; }
+        .log-line .l-level { min-width: 55px; font-weight: 700; }
+        .log-line .l-level.info  { color: var(--accent); }
+        .log-line .l-level.warn  { color: var(--yellow); }
+        .log-line .l-level.error { color: var(--red); }
+        .log-line .l-level.debug { color: #6b7280; }
+        .log-line .l-msg { color: var(--text); }
+        .l-msg .hi-car     { color: var(--accent); font-weight: 600; }
+        .l-msg .hi-group   { color: var(--accent2); font-weight: 600; }
+        .l-msg .hi-ok      { color: var(--green); }
+        .l-msg .hi-wait    { color: var(--orange); }
+        .l-msg .hi-err     { color: var(--red); }
+        .l-msg .hi-num     { color: var(--yellow); font-weight: 600; }
+        .l-msg .hi-sep     { color: #374151; }
+        .l-msg .hi-muted   { color: #6b7280; }
+        .l-msg .hi-bar-empty { color: #374151; }
+        .l-msg .hi-bar-full  { color: var(--accent); }
+        .log-line.separator { padding: .05rem 1.5rem; }
+        .log-line.separator .l-msg { color: #1f2937; }
+        #toast-container {
+            position: fixed; top: .75rem; right: .75rem; z-index: 1000;
+            display: flex; flex-direction: column; gap: .4rem;
+        }
+        .toast {
+            padding: .6rem 1rem; border-radius: 8px; font-size: .8rem;
+            font-weight: 500; animation: slideIn .3s ease-out; max-width: 320px;
+        }
+        .toast.success { background: #064e3b; color: #6ee7b7; border: 1px solid #065f46; }
+        .toast.error   { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
+        .toast.info    { background: #1e3a5f; color: #93c5fd; border: 1px solid #1e40af; }
+        @keyframes slideIn { from { opacity:0; transform:translateX(80px); } to { opacity:1; transform:translateX(0); } }
+        @media (max-width: 900px) { .top-area { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1><span>🚗</span> Car Pooling Service</h1>
+    <div class="header-right">
+        <div class="lang-selector" id="lang-selector">
+            <button class="lang-btn active" data-lang="es" onclick="setLang('es')">🇪🇸 ES</button>
+            <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+            <button class="lang-btn" data-lang="fr" onclick="setLang('fr')">🇫🇷 FR</button>
+            <button class="lang-btn" data-lang="de" onclick="setLang('de')">🇩🇪 DE</button>
+        </div>
+        <div id="status-badge" class="offline"><span class="dot"></span> <span data-i18n="status.checking"></span></div>
+    </div>
+</header>
+
+<div class="top-area">
+    <div class="sidebar">
+        <div class="panel">
+            <h2>🚘 <span data-i18n="panel.loadFleet"></span></h2>
+            <div class="form-row">
+                <label data-i18n="label.carsJson"></label>
+                <textarea id="cars-json">[{"id":1,"seats":4},{"id":2,"seats":6},{"id":3,"seats":5},{"id":4,"seats":4},{"id":5,"seats":6}]</textarea>
+            </div>
+            <button class="btn-primary" onclick="loadCars()">⬆ <span data-i18n="btn.loadCars"></span></button>
+        </div>
+        <div class="panel">
+            <h2>🧑‍🤝‍🧑 <span data-i18n="panel.newJourney"></span></h2>
+            <div class="form-row-inline">
+                <div><label data-i18n="label.groupId"></label><input type="number" id="journey-id" min="1" placeholder="1"></div>
+                <div><label data-i18n="label.people"></label><input type="number" id="journey-people" min="1" max="6" placeholder="1-6"></div>
+            </div>
+            <div style="margin-top:.6rem"><button class="btn-green" onclick="addJourney()">➕ <span data-i18n="btn.requestJourney"></span></button></div>
+        </div>
+        <div class="panel">
+            <h2>🔍 <span data-i18n="panel.locateDropoff"></span></h2>
+            <div class="form-row"><label data-i18n="label.groupId"></label><input type="number" id="action-id" min="1" placeholder="ID"></div>
+            <div style="display:flex; gap:.5rem; margin-top:.4rem">
+                <button class="btn-purple" onclick="locateGroup()">📍 <span data-i18n="btn.locate"></span></button>
+                <button class="btn-orange" onclick="dropoffGroup()">🚪 <span data-i18n="btn.dropoff"></span></button>
+            </div>
+        </div>
+    </div>
+    <div class="main-area">
+        <div class="stats">
+            <div class="stat-card blue"><div class="value" id="stat-cars">0</div><div class="label" data-i18n="stat.cars"></div></div>
+            <div class="stat-card green"><div class="value" id="stat-seats">0</div><div class="label" data-i18n="stat.freeSeats"></div></div>
+            <div class="stat-card purple"><div class="value" id="stat-journeys">0</div><div class="label" data-i18n="stat.activeJourneys"></div></div>
+            <div class="stat-card orange"><div class="value" id="stat-waiting">0</div><div class="label" data-i18n="stat.waiting"></div></div>
+        </div>
+        <div class="panel">
+            <h2>🅿️ <span data-i18n="panel.fleet"></span></h2>
+            <div id="fleet-grid" class="fleet-grid"></div>
+        </div>
+        <div class="panel">
+            <h2>⏳ <span data-i18n="panel.waitingQueue"></span></h2>
+            <div id="waiting-queue" class="queue-list"></div>
+        </div>
+    </div>
+</div>
+
+<div class="resize-handle" id="resize-handle"></div>
+
+<div class="log-section" id="log-section">
+    <div class="log-header">
+        <h2>🖥 <span data-i18n="log.title"></span></h2>
+        <div class="log-actions">
+            <div class="log-filters">
+                <span class="filter-pill active" data-level="all" onclick="setFilter('all')" data-i18n="log.all"></span>
+                <span class="filter-pill" data-level="info" onclick="setFilter('info')">Info</span>
+                <span class="filter-pill" data-level="warn" onclick="setFilter('warn')">Warn</span>
+                <span class="filter-pill" data-level="error" onclick="setFilter('error')">Error</span>
+                <span class="filter-pill" data-level="debug" onclick="setFilter('debug')">Debug</span>
+            </div>
+            <span class="log-count" id="log-count"></span>
+            <button onclick="toggleAutoScroll()">⬇ Auto-scroll: <span id="autoscroll-label">ON</span></button>
+            <button onclick="clearLog()">🗑 <span data-i18n="log.clear"></span></button>
+        </div>
+    </div>
+    <div id="log-content"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// i18n — loaded from /i18n/{lang}.json
+// ══════════════════════════════════════════════════════
+const SUPPORTED_LANGS = ['es', 'en', 'fr', 'de'];
+const DEFAULT_LANG = 'es';
+const i18n = {};
+
+async function loadLanguage(lang) {
+    if (i18n[lang]) return i18n[lang];
+    try {
+        const r = await fetch('/i18n/' + lang + '.json');
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        i18n[lang] = await r.json();
+    } catch (e) {
+        console.warn('Failed to load language "' + lang + '":', e);
+        i18n[lang] = {};
+    }
+    return i18n[lang];
+}
+
+async function preloadLanguages() {
+    await Promise.all(SUPPORTED_LANGS.map(loadLanguage));
+}
+
+let currentLang = localStorage.getItem('carpooling-lang') || DEFAULT_LANG;
+function t(key) { return i18n[currentLang]?.[key] || i18n[DEFAULT_LANG]?.[key] || key; }
+
+async function setLang(lang) {
+    await loadLanguage(lang);
+    currentLang = lang;
+    localStorage.setItem('carpooling-lang', lang);
+    document.documentElement.lang = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+    applyTranslations();
+    render();
+    renderLog();
+}
+function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+}
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let cars = [], journeys = {}, assignments = {}, waitingQueue = [];
+let logLines = [], logFilter = 'all', autoScroll = true;
+
+// ── Resize handle ──────────────────────────────────
+(function() {
+    const handle = document.getElementById('resize-handle');
+    const logSection = document.getElementById('log-section');
+    let startY, startH;
+    handle.addEventListener('mousedown', e => {
+        startY = e.clientY; startH = logSection.offsetHeight;
+        const onMove = ev => { logSection.style.flex = 'none'; logSection.style.height = Math.max(120, startH + (startY - ev.clientY)) + 'px'; };
+        const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+})();
+
+// ── Log system ─────────────────────────────────────
+function now() {
+    const d = new Date();
+    const locale = currentLang === 'en' ? 'en-GB' : currentLang;
+    return d.toLocaleTimeString(locale, { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3,'0');
+}
+function logMsg(level, ...parts) { logLines.push({ ts: now(), level, parts }); if (logLines.length > 500) logLines.shift(); renderLog(); }
+function logSeparator(char = '─') { logLines.push({ ts: '', level: 'sep', parts: [{ t: char.repeat(90), c: 'hi-sep' }] }); renderLog(); }
+
+function renderLog() {
+    const el = document.getElementById('log-content');
+    const filtered = logFilter === 'all' ? logLines : logLines.filter(l => l.level === logFilter || l.level === 'sep');
+    el.innerHTML = filtered.map(l => {
+        if (l.level === 'sep') return '<div class="log-line separator"><span class="l-msg">' + esc(l.parts[0]?.t||'') + '</span></div>';
+        const msgHtml = l.parts.map(p => typeof p === 'string' ? esc(p) : '<span class="' + (p.c||'') + '">' + esc(p.t) + '</span>').join('');
+        return '<div class="log-line"><span class="l-ts">' + l.ts + ' </span><span class="l-level ' + l.level + '">' + l.level.toUpperCase().padEnd(5) + ' </span><span class="l-msg">' + msgHtml + '</span></div>';
+    }).join('');
+    document.getElementById('log-count').textContent = filtered.length + ' ' + t('log.lines');
+    if (autoScroll) el.scrollTop = el.scrollHeight;
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function setFilter(f) { logFilter = f; document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.level === f)); renderLog(); }
+function toggleAutoScroll() { autoScroll = !autoScroll; document.getElementById('autoscroll-label').textContent = autoScroll ? 'ON' : 'OFF'; }
+function clearLog() { logLines = []; renderLog(); }
+
+// ── State snapshot for logs ────────────────────────
+function getOccupancy() {
+    const occ = {}; cars.forEach(c => occ[c.id] = []);
+    Object.entries(assignments).forEach(([jid, cid]) => { if (occ[cid] && journeys[jid]) occ[cid].push({ jid: Number(jid), people: journeys[jid].people }); });
+    return occ;
+}
+function logFleetState() {
+    const totalSeats = cars.reduce((s, c) => s + c.seats, 0);
+    const usedSeats = Object.keys(assignments).reduce((s, jid) => s + (journeys[jid]?.people || 0), 0);
+    const activeJ = Object.keys(assignments).length;
+    const wq = waitingQueue.length;
+    logMsg('info', '📊 ' + t('log.state') + ' ',
+        { t: '' + cars.length, c: 'hi-num' }, ' ' + t('log.cars') + ' | ',
+        { t: usedSeats + '/' + totalSeats, c: 'hi-num' }, ' ' + t('log.seatsLabel') + ' | ',
+        { t: '' + activeJ, c: 'hi-num' }, ' ' + t('log.tripsLabel') + ' | ',
+        { t: '' + wq, c: wq > 0 ? 'hi-wait' : 'hi-num' }, ' ' + t('log.inWaiting'));
+    const occ = getOccupancy();
+    cars.forEach(car => {
+        const groups = occ[car.id] || [];
+        const used = groups.reduce((s, g) => s + g.people, 0);
+        const barHtml = [
+            { t: '   ' + t('fleet.car') + ' #' + car.id + ' ', c: 'hi-car' },
+            { t: '[', c: 'hi-muted' }, { t: '█'.repeat(used), c: 'hi-bar-full' },
+            { t: '░'.repeat(car.seats - used), c: 'hi-bar-empty' },
+            { t: ']', c: 'hi-muted' }, { t: ' ' + used + '/' + car.seats, c: 'hi-muted' },
+        ];
+        if (groups.length > 0) { barHtml.push({ t: '  ← ', c: 'hi-muted' }); groups.forEach((g, i) => { if (i > 0) barHtml.push({ t: ', ', c: 'hi-muted' }); barHtml.push({ t: 'G' + g.jid, c: 'hi-group' }); barHtml.push({ t: '(' + g.people + 'p)', c: 'hi-muted' }); }); }
+        logMsg('debug', ...barHtml);
+    });
+    if (waitingQueue.length > 0) {
+        const qParts = [{ t: '   ' + t('log.queue') + ' ', c: 'hi-wait' }];
+        waitingQueue.forEach((j, i) => { if (i > 0) qParts.push({ t: ' → ', c: 'hi-muted' }); qParts.push({ t: 'G' + j.id, c: 'hi-group' }); qParts.push({ t: '(' + j.people + 'p)', c: 'hi-muted' }); });
+        logMsg('debug', ...qParts);
+    }
+}
+
+// ── API Helpers ────────────────────────────────────
+async function parseApiError(r) {
+    try {
+        const body = await r.json();
+        return body.message || body.error || (t('toast.serverError') + ' ' + r.status);
+    } catch {
+        return t('toast.serverError') + ' ' + r.status;
+    }
+}
+
+// Extracts only the human-readable part from validation messages.
+// "loadCars.cars[0].seats: Seats must be at least 4; dropoff.id: ID must be positive"
+// → "Seats must be at least 4; ID must be positive"
+function friendlyMessage(msg) {
+    return msg.split('; ').map(function(part) {
+        var idx = part.indexOf(': ');
+        return idx >= 0 ? part.substring(idx + 2) : part;
+    }).join('; ');
+}
+
+function showApiError(r, apiMsg) {
+    var friendly = friendlyMessage(apiMsg);
+    if (r.status === 400) {
+        logMsg('error', '  ❌ ', { t: t('toast.validationError'), c: 'hi-err' }, ': ', { t: apiMsg, c: 'hi-muted' }, ' (400)');
+        toast(friendly, 'error');
+    } else if (r.status === 405) {
+        logMsg('error', '  ❌ ', { t: t('toast.methodNotAllowed'), c: 'hi-err' }, ' (405)');
+        toast(t('toast.methodNotAllowed'), 'error');
+    } else {
+        logMsg('error', '  ❌ ', { t: t('toast.serverError'), c: 'hi-err' }, ': ', { t: apiMsg, c: 'hi-muted' }, ' (' + r.status + ')');
+        toast(friendly, 'error');
+    }
+}
+
+// ── API Calls ──────────────────────────────────────
+async function checkStatus() {
+    const badge = document.getElementById('status-badge');
+    try {
+        const r = await fetch('/api/v1/status');
+        if (r.ok) { badge.className = 'online'; badge.innerHTML = '<span class="dot"></span> ' + t('status.online'); }
+        else throw new Error();
+    } catch { badge.className = 'offline'; badge.innerHTML = '<span class="dot"></span> ' + t('status.offline'); }
+}
+
+async function loadCars() {
+    const raw = document.getElementById('cars-json').value.trim();
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { toast(t('toast.invalidJson'), 'error'); logMsg('error', '❌ ' + t('log.invalidJson')); return; }
+    logSeparator('═');
+    logMsg('info', '🚘 ', { t: 'PUT /api/v1/cars', c: 'hi-car' }, ' — ' + t('log.loadingFleet'));
+    if (Object.keys(journeys).length > 0 || cars.length > 0) {
+        logMsg('warn', '⚠  ' + t('log.resetPrev') + ' ',
+            { t: '' + cars.length, c: 'hi-num' }, ' ' + t('log.cars') + ', ',
+            { t: '' + Object.keys(journeys).length, c: 'hi-num' }, ' ' + t('log.journeys') + ', ',
+            { t: '' + waitingQueue.length, c: 'hi-num' }, ' ' + t('log.inWaiting'));
+    }
+    try {
+        const r = await fetch('/api/v1/cars', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed) });
+        if (r.ok) {
+            cars = parsed.map(c => ({ ...c })); journeys = {}; assignments = {}; waitingQueue = [];
+            const totalSeats = cars.reduce((s, c) => s + c.seats, 0);
+            logMsg('info', { t: '✅ ' + t('log.fleetLoaded') + ' ', c: 'hi-ok' },
+                { t: '' + cars.length, c: 'hi-num' }, ' ' + t('log.cars') + ', ',
+                { t: '' + totalSeats, c: 'hi-num' }, ' ' + t('log.totalSeats'));
+            cars.forEach(c => logMsg('debug', '   ', { t: t('fleet.car') + ' #' + c.id, c: 'hi-car' }, ': ' + c.seats + ' ' + t('log.seats')));
+            toast(cars.length + ' ' + t('toast.carsLoaded'), 'success'); render();
+        } else { const apiMsg = await parseApiError(r); showApiError(r, apiMsg); }
+    } catch (e) { logMsg('error', '❌ ' + t('log.connError') + ': ', e.message || 'unknown'); toast(t('toast.connError'), 'error'); }
+    logSeparator('═');
+}
+
+async function addJourney() {
+    const id = parseInt(document.getElementById('journey-id').value);
+    const people = parseInt(document.getElementById('journey-people').value);
+    if (isNaN(id) || isNaN(people) || people < 1 || people > 6) {
+        toast(t('toast.invalidIdPeople'), 'error');
+        logMsg('error', '❌ ' + t('log.invalidData') + ' ID=', { t: '' + (id||'?'), c:'hi-num' }, ', people=', { t: '' + (people||'?'), c:'hi-num' }); return;
+    }
+    if (id <= 0) {
+        toast(t('toast.negativeId'), 'error');
+        logMsg('error', '❌ ' + t('toast.negativeId') + ': ID=', { t: '' + id, c:'hi-num' }); return;
+    }
+    logSeparator();
+    logMsg('info', '🧑‍🤝‍🧑 ', { t: 'POST /api/v1/journeys', c: 'hi-car' }, ' — ',
+        { t: 'Grupo ' + id, c: 'hi-group' }, ' (', { t: '' + people, c: 'hi-num' }, ' ' + t('log.people') + ')');
+    try {
+        const r = await fetch('/api/v1/journeys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, people }) });
+        if (r.status === 201 || r.ok) {
+            journeys[id] = { id, people }; await syncLocate(id);
+            if (assignments[id]) { logMsg('info', { t: '  ✅ ' + t('log.assigned'), c: 'hi-ok' }, ' → ', { t: t('fleet.car') + ' #' + assignments[id], c: 'hi-car' }); }
+            else { logMsg('warn', { t: '  ⏳ ' + t('log.noCar'), c: 'hi-wait' }, ' — ' + t('log.addedQueue') + ' ', { t: '' + waitingQueue.length, c: 'hi-num' }, ')'); }
+            logFleetState();
+            toast('Grupo ' + id + ' (' + people + 'p) ' + t('toast.groupRegistered'), 'success');
+            document.getElementById('journey-id').value = ''; document.getElementById('journey-people').value = ''; render();
+        } else if (r.status === 409) {
+            logMsg('error', '  ❌ ', { t: 'Grupo ' + id, c: 'hi-group' }, ' ' + t('toast.duplicateGroup') + ' (409)');
+            toast('Grupo ' + id + ' ' + t('toast.duplicateGroup'), 'error');
+        } else { const apiMsg = await parseApiError(r); showApiError(r, apiMsg); }
+    } catch { logMsg('error', '  ❌ ' + t('log.connError')); toast(t('toast.connError'), 'error'); }
+}
+
+async function locateGroup() {
+    const id = parseInt(document.getElementById('action-id').value);
+    if (isNaN(id)) { toast(t('toast.enterId'), 'error'); return; }
+    if (id <= 0) { toast(t('toast.negativeId'), 'error'); logMsg('error', '❌ ' + t('toast.negativeId') + ': ID=', { t: '' + id, c:'hi-num' }); return; }
+    logSeparator();
+    logMsg('info', '📍 ', { t: 'GET /api/v1/journeys/' + id + '/car', c: 'hi-car' }, ' — ', { t: 'Grupo ' + id, c: 'hi-group' });
+    try {
+        const r = await fetch('/api/v1/journeys/' + id + '/car', { method: 'GET', headers: { 'Accept': 'application/json' } });
+        if (r.status === 200) {
+            const car = await r.json();
+            logMsg('info', { t: '  ✅ ' + t('log.located'), c: 'hi-ok' }, ': ', { t: 'Grupo ' + id, c: 'hi-group' }, ' → ', { t: t('fleet.car') + ' #' + car.id, c: 'hi-car' }, ' (', { t: '' + car.seats, c: 'hi-num' }, ' ' + t('log.seats') + ')');
+            toast('Grupo ' + id + ' → ' + t('fleet.car') + ' ' + car.id, 'info');
+        } else if (r.status === 204) {
+            logMsg('warn', { t: '  ⏳ ' + t('log.waiting'), c: 'hi-wait' }, ': ', { t: 'Grupo ' + id, c: 'hi-group' }, ' ' + t('log.noCarYet'));
+            toast('Grupo ' + id + ' ' + t('toast.inQueue'), 'info');
+        } else if (r.status === 404) {
+            logMsg('error', '  ❌ ', { t: 'Grupo ' + id, c: 'hi-group' }, ' ' + t('log.notFound') + ' (404)');
+            toast('Grupo ' + id + ' ' + t('toast.notFound'), 'error');
+        } else { const apiMsg = await parseApiError(r); showApiError(r, apiMsg); }
+    } catch { logMsg('error', '  ❌ ' + t('log.connError')); toast(t('toast.connError'), 'error'); }
+}
+
+async function dropoffGroup() {
+    const id = parseInt(document.getElementById('action-id').value);
+    if (isNaN(id)) { toast(t('toast.enterId'), 'error'); return; }
+    if (id <= 0) { toast(t('toast.negativeId'), 'error'); logMsg('error', '❌ ' + t('toast.negativeId') + ': ID=', { t: '' + id, c:'hi-num' }); return; }
+    logSeparator();
+    const wasAssigned = assignments[id] !== undefined, carId = assignments[id], journey = journeys[id];
+    logMsg('info', '🚪 ', { t: 'DELETE /api/v1/journeys/' + id, c: 'hi-car' }, ' — ', { t: 'Grupo ' + id, c: 'hi-group' });
+    try {
+        const r = await fetch('/api/v1/journeys/' + id, { method: 'DELETE' });
+        if (r.ok) {
+            if (wasAssigned && journey) {
+                logMsg('info', { t: '  ✅ ' + t('log.droppedOff'), c: 'hi-ok' }, ': ', { t: 'Grupo ' + id, c: 'hi-group' }, ' (', { t: journey.people + 'p', c: 'hi-num' }, ') ' + t('log.leavesFrom') + ' ', { t: t('fleet.car') + ' #' + carId, c: 'hi-car' });
+            } else if (journey) {
+                logMsg('info', { t: '  ✅ ' + t('log.removed'), c: 'hi-ok' }, ': ', { t: 'Grupo ' + id, c: 'hi-group' }, ' (', { t: journey.people + 'p', c: 'hi-num' }, ') ' + t('log.removedFromQueue'));
+            } else {
+                logMsg('info', { t: '  ✅ ' + t('log.droppedOff'), c: 'hi-ok' }, ': ', { t: 'Grupo ' + id, c: 'hi-group' });
+            }
+            delete assignments[id]; delete journeys[id]; waitingQueue = waitingQueue.filter(j => j.id !== id);
+            const prevWaiting = waitingQueue.map(j => j.id); await syncAll();
+            const nowWaiting = waitingQueue.map(j => j.id);
+            const reassigned = prevWaiting.filter(wid => !nowWaiting.includes(wid) && assignments[wid]);
+            if (reassigned.length > 0) {
+                logMsg('info', '  🔄 ' + t('log.reassignAuto'));
+                reassigned.forEach(rid => { const j = journeys[rid]; logMsg('info', '     ', { t: '✅ Grupo ' + rid, c: 'hi-ok' }, ' (', { t: (j?.people||'?') + 'p', c: 'hi-num' }, ') → ', { t: t('fleet.car') + ' #' + assignments[rid], c: 'hi-car' }); });
+            } else if (waitingQueue.length > 0) { logMsg('debug', '  🔄 ' + t('log.reassignNone')); }
+            logFleetState(); toast('Grupo ' + id + ' ' + t('toast.groupDropped'), 'success'); render();
+        } else if (r.status === 404) {
+            logMsg('error', '  ❌ ', { t: 'Grupo ' + id, c: 'hi-group' }, ' ' + t('log.notFound') + ' (404)');
+            toast('Grupo ' + id + ' ' + t('toast.notFound'), 'error');
+        } else { const apiMsg = await parseApiError(r); showApiError(r, apiMsg); }
+    } catch { logMsg('error', '  ❌ ' + t('log.connError')); toast(t('toast.connError'), 'error'); }
+}
+
+// ── Sync ───────────────────────────────────────────
+async function syncLocate(id) {
+    try {
+        const r = await fetch('/api/v1/journeys/' + id + '/car', { method: 'GET', headers: { 'Accept': 'application/json' } });
+        if (r.status === 200) { const car = await r.json(); assignments[id] = car.id; waitingQueue = waitingQueue.filter(j => j.id !== id); }
+        else if (r.status === 204) { delete assignments[id]; if (!waitingQueue.find(j => j.id === id) && journeys[id]) waitingQueue.push(journeys[id]); }
+        else if (r.status === 404) { delete journeys[id]; delete assignments[id]; waitingQueue = waitingQueue.filter(j => j.id !== id); }
+    } catch {}
+}
+async function syncAll() { for (const id of Object.keys(journeys).map(Number)) await syncLocate(id); }
+
+// ── Rendering ──────────────────────────────────────
+function render() { renderStats(); renderFleet(); renderWaiting(); }
+function renderStats() {
+    document.getElementById('stat-cars').textContent = cars.length;
+    const totalSeats = cars.reduce((s, c) => s + c.seats, 0);
+    const usedSeats = Object.keys(assignments).reduce((s, jid) => s + (journeys[jid]?.people || 0), 0);
+    document.getElementById('stat-seats').textContent = totalSeats - usedSeats;
+    document.getElementById('stat-journeys').textContent = Object.keys(assignments).length;
+    document.getElementById('stat-waiting').textContent = waitingQueue.length;
+}
+function renderFleet() {
+    const grid = document.getElementById('fleet-grid');
+    if (cars.length === 0) { grid.innerHTML = '<div class="empty-state">' + t('fleet.emptyState') + '</div>'; return; }
+    const occ = getOccupancy();
+    grid.innerHTML = cars.map(car => {
+        const groups = occ[car.id] || [];
+        const used = groups.reduce((s, g) => s + g.people, 0);
+        const seats = Array.from({length: car.seats}, (_, i) => '<div class="seat ' + (i < used ? 'taken' : 'empty') + '"></div>').join('');
+        const labels = groups.map(g => '<span style="font-size:.65rem;color:var(--accent)">G' + g.jid + '(' + g.people + 'p)</span>').join(' ');
+        return '<div class="car-card">' +
+            '<div class="car-icon">' + (used === car.seats ? '🚙' : used > 0 ? '🚗' : '🚘') + '</div>' +
+            '<div class="car-id">' + t('fleet.car') + ' #' + car.id + '</div>' +
+            '<div class="seats-visual">' + seats + '</div>' +
+            '<div class="car-info">' + used + '/' + car.seats + ' ' + t('fleet.occupied') + '</div>' +
+            '<div style="margin-top:.2rem">' + (labels || '<span style="font-size:.65rem;color:var(--muted)">' + t('fleet.empty') + '</span>') + '</div>' +
+        '</div>';
+    }).join('');
+}
+function renderWaiting() {
+    const c = document.getElementById('waiting-queue');
+    if (waitingQueue.length === 0) { c.innerHTML = '<div class="empty-state">' + t('queue.emptyState') + '</div>'; return; }
+    c.innerHTML = waitingQueue.map(j => {
+        const dots = Array(j.people).fill('<div class="people-dot"></div>').join('');
+        return '<div class="queue-item"><strong>G' + j.id + '</strong><div class="people-dots">' + dots + '</div><span style="color:var(--muted);font-size:.65rem">' + j.people + 'p</span></div>';
+    }).join('');
+}
+
+// ── Toasts ─────────────────────────────────────────
+function toast(msg, type) {
+    type = type || 'info';
+    const c = document.getElementById('toast-container');
+    const el = document.createElement('div'); el.className = 'toast ' + type; el.textContent = msg;
+    c.appendChild(el); setTimeout(function() { el.remove(); }, 3000);
+}
+
+// ── Init ───────────────────────────────────────────
+(async function init() {
+    await preloadLanguages();
+    await setLang(currentLang);
+    checkStatus(); setInterval(checkStatus, 10000);
+    render();
+    logMsg('info', '🚀 ', { t: 'Car Pooling Service', c: 'hi-car' }, ' — ' + t('log.init'));
+    logMsg('debug', '   ' + t('log.waitingFleet'));
+})();
+</script>
+</body>
+</html>
