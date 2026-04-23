@@ -1,34 +1,34 @@
-# ⚙️ Guía de Configuración
+# ⚙️ Configuration Guide
 
-## 1. Requisitos previos
+## 1. Prerequisites
 
-| Componente | Versión | Notas |
+| Component | Version | Notes |
 |---|---|---|
-| **Java JDK** | 21+ | OpenJDK o Eclipse Temurin |
-| **Maven** | 3.9+ | Para compilar el proyecto |
-| **PostgreSQL** | 14+ | Solo en producción (los tests usan H2) |
-| **Docker** | 24+ | Opcional, para despliegue contenerizado |
+| **Java JDK** | 21+ | OpenJDK or Eclipse Temurin |
+| **Maven** | 3.9+ | To build the project |
+| **PostgreSQL** | 14+ | Production only (tests use H2) |
+| **Docker** | 24+ | Optional, for containerized deployment |
 
-## 2. Ejecución local (desarrollo)
+## 2. Local Execution (Development)
 
-### 2.1 Con PostgreSQL local
+### 2.1 With Local PostgreSQL
 
 ```bash
-# 1. Crear base de datos
+# 1. Create database
 createdb carpooling
 
-# 2. Compilar y ejecutar
+# 2. Build and run
 mvn spring-boot:run
 ```
 
-La app arranca en `http://localhost:8080` con la configuración por defecto:
+The app starts at `http://localhost:8080` with default configuration:
 - Host: `localhost:5432`
-- Base de datos: `carpooling`
-- Usuario/contraseña: `carpooling/carpooling`
+- Database: `carpooling`
+- User/password: `carpooling/carpooling`
 
-### 2.2 Solo para desarrollo rápido (sin PostgreSQL)
+### 2.2 Quick Development (without PostgreSQL)
 
-Si quieres arrancar sin PostgreSQL, puedes sobreescribir propiedades para usar H2 en tiempo de ejecución:
+To start without PostgreSQL, you can override properties at runtime to use H2:
 
 ```bash
 mvn spring-boot:run -Dspring-boot.run.arguments="\
@@ -37,99 +37,99 @@ mvn spring-boot:run -Dspring-boot.run.arguments="\
   --spring.jpa.hibernate.ddl-auto=create-drop"
 ```
 
-> Necesitarás mover H2 de `<scope>test</scope>` a `<scope>runtime</scope>` en `pom.xml`.
+> You will need to move H2 from `<scope>test</scope>` to `<scope>runtime</scope>` in `pom.xml`.
 
-## 3. Ejecución con Docker
+## 3. Docker Execution
 
-### 3.1 Docker Compose (recomendado)
+### 3.1 Docker Compose (recommended)
 
 ```bash
 docker compose up --build
 ```
 
-Esto levanta:
-- **carpooling-db**: PostgreSQL 16 en puerto 5432
-- **carpooling-app**: Spring Boot en puerto 8080
+This starts:
+- **carpooling-db**: PostgreSQL 16 on port 5432
+- **carpooling-app**: Spring Boot on port 8080
 
-Los datos se persisten en el volumen `pgdata`.
+Data is persisted in the `pgdata` volume.
 
-### 3.2 Parar y limpiar
+### 3.2 Stop and Clean Up
 
 ```bash
-docker compose down          # Para los servicios
-docker compose down -v       # Para + elimina datos de PostgreSQL
+docker compose down          # Stop services
+docker compose down -v       # Stop + delete PostgreSQL data
 ```
 
-## 4. Variables de entorno
+## 4. Environment Variables
 
-| Variable | Descripción | Valor por defecto |
+| Variable | Description | Default |
 |---|---|---|
-| `DB_HOST` | Host de PostgreSQL | `localhost` |
-| `DB_PORT` | Puerto de PostgreSQL | `5432` |
-| `DB_NAME` | Nombre de la base de datos | `carpooling` |
-| `DB_USER` | Usuario de base de datos | `carpooling` |
-| `DB_PASSWORD` | Contraseña de base de datos | `carpooling` |
-| `DB_URL` | URL JDBC completa (sobreescribe HOST/PORT/NAME) | — |
-| `JAVA_OPTS` | Opciones JVM | — |
+| `DB_HOST` | PostgreSQL host | `localhost` |
+| `DB_PORT` | PostgreSQL port | `5432` |
+| `DB_NAME` | Database name | `carpooling` |
+| `DB_USER` | Database user | `carpooling` |
+| `DB_PASSWORD` | Database password | `carpooling` |
+| `DB_URL` | Full JDBC URL (overrides HOST/PORT/NAME) | — |
+| `JAVA_OPTS` | JVM options | — |
 
-### Prioridad
+### Priority
 
-Si se define `DB_URL`, tiene prioridad sobre `DB_HOST` + `DB_PORT` + `DB_NAME`:
+If `DB_URL` is defined, it takes priority over `DB_HOST` + `DB_PORT` + `DB_NAME`:
 
 ```properties
 spring.datasource.url=${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:carpooling}}
 ```
 
-## 5. Configuración de application.properties
+## 5. application.properties Reference
 
 ```properties
-# Puerto del servidor
+# Server port
 server.port=8080
 
-# Base de datos
-spring.datasource.url=...          # Ver sección 4
+# Database
+spring.datasource.url=...          # See section 4
 spring.datasource.username=...
 spring.datasource.password=...
 spring.datasource.driver-class-name=org.postgresql.Driver
 
-# Pool de conexiones (optimizado para free tier)
+# Connection pool (optimized for free tier)
 spring.datasource.hikari.maximum-pool-size=5
 spring.datasource.hikari.minimum-idle=1
 
 # JPA
-spring.jpa.hibernate.ddl-auto=update    # Crea/actualiza tablas automáticamente
-spring.jpa.open-in-view=false           # Evita lazy loading en la vista
+spring.jpa.hibernate.ddl-auto=update    # Auto-create/update tables
+spring.jpa.open-in-view=false           # Prevent lazy loading in views
 
 # Logging
-logging.level.com.carpooling=INFO       # Cambiar a DEBUG para más detalle
+logging.level.com.carpooling=INFO       # Change to DEBUG for more detail
 ```
 
-## 6. Despliegue en Render (cloud gratuito)
+## 6. Render Deployment (Free Cloud)
 
-El proyecto incluye `render.yaml` (Blueprint) que configura todo automáticamente.
+The project includes `render.yaml` (Blueprint) that configures everything automatically.
 
-### Pasos:
+### Steps:
 
-1. **Sube el código a GitHub** (ya hecho: `fercadu/car-pooling-service`)
-2. Ve a [dashboard.render.com](https://dashboard.render.com)
-3. **New → Blueprint** → selecciona el repositorio
-4. Render lee `render.yaml` y crea:
+1. **Push code to GitHub** (already done: `fercadu/car-pooling-service`)
+2. Go to [dashboard.render.com](https://dashboard.render.com)
+3. **New → Blueprint** → select the repository
+4. Render reads `render.yaml` and creates:
    - 🐘 PostgreSQL `carpooling-db` (free tier)
    - 🚀 Web Service `car-pooling-service` (free tier, Docker)
-5. Las variables de entorno se conectan automáticamente
-6. Click **Apply** → despliega en ~3-4 minutos
+5. Environment variables are connected automatically
+6. Click **Apply** → deploys in ~3-4 minutes
 
-### Limitaciones del free tier:
-- La app se **duerme tras 15 minutos** sin tráfico
-- La primera petición tras dormir tarda ~30 segundos
-- PostgreSQL gratuito durante **90 días**
+### Free Tier Limitations:
+- The app **sleeps after 15 minutes** without traffic
+- First request after sleeping takes ~30 seconds
+- Free PostgreSQL for **90 days**
 
-### Despliegues automáticos:
-Cada `git push` a `main` lanza un redespliegue automático.
+### Automatic Deployments:
+Every `git push` to `main` triggers an automatic redeployment.
 
-## 7. Configuración de tests
+## 7. Test Configuration
 
-Los tests usan H2 en memoria (`src/test/resources/application.properties`):
+Tests use H2 in-memory (`src/test/resources/application.properties`):
 
 ```properties
 spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
@@ -140,27 +140,27 @@ spring.jpa.hibernate.ddl-auto=create-drop
 spring.jpa.open-in-view=false
 ```
 
-Ejecutar tests:
+Run tests:
 ```bash
 mvn test
 ```
 
 ## 8. Logging
 
-### Niveles configurables
+### Configurable Levels
 
-| Logger | Nivel | Qué muestra |
+| Logger | Level | What it shows |
 |---|---|---|
-| `com.carpooling` | `INFO` | Operaciones principales (load, journey, dropoff, reassign) |
-| `com.carpooling` | `DEBUG` | + Detalle de flota, asientos, localizaciones |
-| `DispatcherServlet` | `DEBUG` | Método y URI de cada petición HTTP |
+| `com.carpooling` | `INFO` | Main operations (load, journey, dropoff, reassign) |
+| `com.carpooling` | `DEBUG` | + Fleet detail, seats, locate calls |
+| `DispatcherServlet` | `DEBUG` | Method and URI of every HTTP request |
 
-Para cambiar en producción sin recompilar:
+To change in production without recompiling:
 ```bash
-# Via variable de entorno
+# Via environment variable
 LOGGING_LEVEL_COM_CARPOOLING=DEBUG
 
-# O en docker-compose.yml
+# Or in docker-compose.yml
 environment:
   LOGGING_LEVEL_COM_CARPOOLING: DEBUG
 ```

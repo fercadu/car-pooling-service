@@ -83,5 +83,17 @@
   "toast.serverError": "Error del servidor",
   "toast.invalidSeats": "Los asientos deben estar entre 4 y 6",
   "toast.emptyCarList": "La lista de coches no puede estar vacía",
-  "toast.methodNotAllowed": "Método HTTP no permitido"
+  "toast.methodNotAllowed": "Método HTTP no permitido",
+
+  "auth.loginTab": "Iniciar sesión",
+  "auth.registerTab": "Registrarse",
+  "auth.username": "Usuario",
+  "auth.password": "Contraseña",
+  "auth.email": "Correo electrónico",
+  "auth.loginBtn": "Entrar",
+  "auth.registerBtn": "Registrarse",
+  "auth.logout": "Cerrar sesión",
+  "auth.fieldsRequired": "Usuario y contraseña son obligatorios",
+  "auth.invalidCredentials": "Usuario o contraseña incorrectos",
+  "auth.loggedIn": "ha iniciado sesión"
 }

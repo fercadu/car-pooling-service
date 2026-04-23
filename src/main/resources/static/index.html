@@ -194,6 +194,33 @@
 </head>
 <body>
 
+<!-- ═══ Login Overlay ═══ -->
+<div id="login-overlay" style="position:fixed;inset:0;z-index:2000;background:var(--bg);display:flex;align-items:center;justify-content:center;">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;width:340px;text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">🚗</div>
+        <h2 style="margin-bottom:1.5rem;font-size:1.2rem;">Car Pooling Service</h2>
+        <div id="login-tab-bar" style="display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:2px;margin-bottom:1.2rem;border:1px solid var(--border);">
+            <button class="lang-btn active" id="tab-login" onclick="showAuthTab('login')" style="flex:1;padding:.4rem;font-size:.8rem;" data-i18n="auth.loginTab">Login</button>
+            <button class="lang-btn" id="tab-register" onclick="showAuthTab('register')" style="flex:1;padding:.4rem;font-size:.8rem;" data-i18n="auth.registerTab">Register</button>
+        </div>
+        <!-- Login form -->
+        <div id="login-form">
+            <div class="form-row"><label data-i18n="auth.username">Username</label><input type="text" id="login-username" placeholder="admin"></div>
+            <div class="form-row"><label data-i18n="auth.password">Password</label><input type="password" id="login-password" placeholder="••••••"></div>
+            <div id="login-error" style="color:var(--red);font-size:.75rem;margin:.5rem 0;display:none;"></div>
+            <button class="btn-primary" onclick="doLogin()" style="width:100%;justify-content:center;margin-top:.5rem;">🔑 <span data-i18n="auth.loginBtn">Login</span></button>
+        </div>
+        <!-- Register form -->
+        <div id="register-form" style="display:none;">
+            <div class="form-row"><label data-i18n="auth.username">Username</label><input type="text" id="reg-username" placeholder="username"></div>
+            <div class="form-row"><label data-i18n="auth.email">Email</label><input type="email" id="reg-email" placeholder="user@example.com"></div>
+            <div class="form-row"><label data-i18n="auth.password">Password</label><input type="password" id="reg-password" placeholder="min 6 chars"></div>
+            <div id="reg-error" style="color:var(--red);font-size:.75rem;margin:.5rem 0;display:none;"></div>
+            <button class="btn-green" onclick="doRegister()" style="width:100%;justify-content:center;margin-top:.5rem;">📝 <span data-i18n="auth.registerBtn">Register</span></button>
+        </div>
+    </div>
+</div>
+
 <header>
     <h1><span>🚗</span> Car Pooling Service</h1>
     <div class="header-right">
@@ -204,6 +231,11 @@
             <button class="lang-btn" data-lang="de" onclick="setLang('de')">🇩🇪 DE</button>
         </div>
         <div id="status-badge" class="offline"><span class="dot"></span> <span data-i18n="status.checking"></span></div>
+        <div id="user-info" style="display:none;font-size:.75rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.3rem .7rem;display:flex;align-items:center;gap:.5rem;">
+            <span>👤 <strong id="user-display"></strong></span>
+            <span id="user-role-badge" style="font-size:.65rem;padding:.1rem .4rem;border-radius:4px;background:#064e3b;color:#6ee7b7;"></span>
+            <button onclick="doLogout()" style="padding:.2rem .5rem;font-size:.65rem;background:var(--red);color:#fff;border-radius:4px;cursor:pointer;border:none;">⏏ <span data-i18n="auth.logout">Logout</span></button>
+        </div>
     </div>
 </header>
 
@@ -315,6 +347,105 @@ async function setLang(lang) {
 }
 function applyTranslations() {
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+}
+
+// ══════════════════════════════════════════════════════
+// AUTH STATE
+// ══════════════════════════════════════════════════════
+let authToken = localStorage.getItem('carpooling-token') || null;
+let currentUser = JSON.parse(localStorage.getItem('carpooling-user') || 'null');
+
+function authHeaders(extra) {
+    const h = { ...(extra || {}) };
+    if (authToken) h['Authorization'] = 'Bearer ' + authToken;
+    return h;
+}
+function hasRole(role) { return currentUser && currentUser.roles && currentUser.roles.includes(role); }
+function isAdmin() { return hasRole('ADMIN'); }
+function canOperate() { return hasRole('ADMIN') || hasRole('OPERATOR'); }
+
+function showAuthTab(tab) {
+    document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+}
+
+async function doLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+    if (!username || !password) { errEl.textContent = t('auth.fieldsRequired'); errEl.style.display = 'block'; return; }
+    try {
+        const r = await fetch('/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+        if (r.ok) {
+            const data = await r.json();
+            authToken = data.token; currentUser = { username: data.username, roles: Array.from(data.roles || []) };
+            localStorage.setItem('carpooling-token', authToken);
+            localStorage.setItem('carpooling-user', JSON.stringify(currentUser));
+            onAuthSuccess();
+        } else {
+            const body = await r.json().catch(() => ({}));
+            errEl.textContent = body.message || t('auth.invalidCredentials');
+            errEl.style.display = 'block';
+        }
+    } catch { errEl.textContent = t('toast.connError'); errEl.style.display = 'block'; }
+}
+
+async function doRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const errEl = document.getElementById('reg-error');
+    errEl.style.display = 'none';
+    if (!username || !password) { errEl.textContent = t('auth.fieldsRequired'); errEl.style.display = 'block'; return; }
+    try {
+        const r = await fetch('/api/v1/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, email: email || null }) });
+        if (r.ok || r.status === 201) {
+            const data = await r.json();
+            authToken = data.token; currentUser = { username: data.username, roles: Array.from(data.roles || []) };
+            localStorage.setItem('carpooling-token', authToken);
+            localStorage.setItem('carpooling-user', JSON.stringify(currentUser));
+            onAuthSuccess();
+        } else {
+            const body = await r.json().catch(() => ({}));
+            errEl.textContent = body.message || t('toast.serverError');
+            errEl.style.display = 'block';
+        }
+    } catch { errEl.textContent = t('toast.connError'); errEl.style.display = 'block'; }
+}
+
+function doLogout() {
+    authToken = null; currentUser = null;
+    localStorage.removeItem('carpooling-token'); localStorage.removeItem('carpooling-user');
+    document.getElementById('login-overlay').style.display = 'flex';
+    document.getElementById('user-info').style.display = 'none';
+}
+
+function onAuthSuccess() {
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('user-info').style.display = 'flex';
+    document.getElementById('user-display').textContent = currentUser.username;
+    const roleBadge = document.getElementById('user-role-badge');
+    const topRole = currentUser.roles.includes('ADMIN') ? 'ADMIN' : currentUser.roles.includes('OPERATOR') ? 'OPERATOR' : currentUser.roles.includes('PASSENGER') ? 'PASSENGER' : 'OBSERVER';
+    roleBadge.textContent = topRole;
+    const roleColors = { ADMIN: '#7f1d1d;color:#fca5a5', OPERATOR: '#1e3a5f;color:#93c5fd', PASSENGER: '#064e3b;color:#6ee7b7', OBSERVER: '#422006;color:#fbbf24' };
+    const rc = roleColors[topRole] || roleColors.OBSERVER;
+    roleBadge.style.background = rc.split(';')[0]; roleBadge.style.color = rc.split('color:')[1] || '#fff';
+    applyRoleVisibility();
+    logMsg('info', '🔓 ', { t: currentUser.username, c: 'hi-group' }, ' ', { t: t('auth.loggedIn'), c: 'hi-ok' }, ' [', { t: currentUser.roles.join(', '), c: 'hi-num' }, ']');
+}
+
+function applyRoleVisibility() {
+    // Load Fleet panel: ADMIN only
+    const sidebar = document.querySelectorAll('.sidebar .panel');
+    if (sidebar[0]) sidebar[0].style.display = isAdmin() ? 'block' : 'none';
+    // New Journey panel: ADMIN or OPERATOR
+    if (sidebar[1]) sidebar[1].style.display = canOperate() ? 'block' : 'none';
+    // Locate/Dropoff panel: locate=all auth, dropoff=ADMIN/OPERATOR
+    const dropoffBtn = document.querySelector('button[onclick="dropoffGroup()"]');
+    if (dropoffBtn) dropoffBtn.style.display = canOperate() ? 'inline-flex' : 'none';
 }
 
 // ══════════════════════════════════════════════════════
@@ -455,7 +586,7 @@ async function loadCars() {
             { t: '' + waitingQueue.length, c: 'hi-num' }, ' ' + t('log.inWaiting'));
     }
     try {
-        const r = await fetch('/api/v1/cars', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed) });
+        const r = await fetch('/api/v1/cars', { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(parsed) });
         if (r.ok) {
             cars = parsed.map(c => ({ ...c })); journeys = {}; assignments = {}; waitingQueue = [];
             const totalSeats = cars.reduce((s, c) => s + c.seats, 0);
@@ -484,7 +615,7 @@ async function addJourney() {
     logMsg('info', '🧑‍🤝‍🧑 ', { t: 'POST /api/v1/journeys', c: 'hi-car' }, ' — ',
         { t: 'Grupo ' + id, c: 'hi-group' }, ' (', { t: '' + people, c: 'hi-num' }, ' ' + t('log.people') + ')');
     try {
-        const r = await fetch('/api/v1/journeys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, people }) });
+        const r = await fetch('/api/v1/journeys', { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ id, people }) });
         if (r.status === 201 || r.ok) {
             journeys[id] = { id, people }; await syncLocate(id);
             if (assignments[id]) { logMsg('info', { t: '  ✅ ' + t('log.assigned'), c: 'hi-ok' }, ' → ', { t: t('fleet.car') + ' #' + assignments[id], c: 'hi-car' }); }
@@ -506,7 +637,7 @@ async function locateGroup() {
     logSeparator();
     logMsg('info', '📍 ', { t: 'GET /api/v1/journeys/' + id + '/car', c: 'hi-car' }, ' — ', { t: 'Grupo ' + id, c: 'hi-group' });
     try {
-        const r = await fetch('/api/v1/journeys/' + id + '/car', { method: 'GET', headers: { 'Accept': 'application/json' } });
+        const r = await fetch('/api/v1/journeys/' + id + '/car', { method: 'GET', headers: authHeaders({ 'Accept': 'application/json' }) });
         if (r.status === 200) {
             const car = await r.json();
             logMsg('info', { t: '  ✅ ' + t('log.located'), c: 'hi-ok' }, ': ', { t: 'Grupo ' + id, c: 'hi-group' }, ' → ', { t: t('fleet.car') + ' #' + car.id, c: 'hi-car' }, ' (', { t: '' + car.seats, c: 'hi-num' }, ' ' + t('log.seats') + ')');
@@ -529,7 +660,7 @@ async function dropoffGroup() {
     const wasAssigned = assignments[id] !== undefined, carId = assignments[id], journey = journeys[id];
     logMsg('info', '🚪 ', { t: 'DELETE /api/v1/journeys/' + id, c: 'hi-car' }, ' — ', { t: 'Grupo ' + id, c: 'hi-group' });
     try {
-        const r = await fetch('/api/v1/journeys/' + id, { method: 'DELETE' });
+        const r = await fetch('/api/v1/journeys/' + id, { method: 'DELETE', headers: authHeaders() });
         if (r.ok) {
             if (wasAssigned && journey) {
                 logMsg('info', { t: '  ✅ ' + t('log.droppedOff'), c: 'hi-ok' }, ': ', { t: 'Grupo ' + id, c: 'hi-group' }, ' (', { t: journey.people + 'p', c: 'hi-num' }, ') ' + t('log.leavesFrom') + ' ', { t: t('fleet.car') + ' #' + carId, c: 'hi-car' });
@@ -557,7 +688,7 @@ async function dropoffGroup() {
 // ── Sync ───────────────────────────────────────────
 async function syncLocate(id) {
     try {
-        const r = await fetch('/api/v1/journeys/' + id + '/car', { method: 'GET', headers: { 'Accept': 'application/json' } });
+        const r = await fetch('/api/v1/journeys/' + id + '/car', { method: 'GET', headers: authHeaders({ 'Accept': 'application/json' }) });
         if (r.status === 200) { const car = await r.json(); assignments[id] = car.id; waitingQueue = waitingQueue.filter(j => j.id !== id); }
         else if (r.status === 204) { delete assignments[id]; if (!waitingQueue.find(j => j.id === id) && journeys[id]) waitingQueue.push(journeys[id]); }
         else if (r.status === 404) { delete journeys[id]; delete assignments[id]; waitingQueue = waitingQueue.filter(j => j.id !== id); }
@@ -615,6 +746,14 @@ function toast(msg, type) {
     await preloadLanguages();
     await setLang(currentLang);
     checkStatus(); setInterval(checkStatus, 10000);
+    // Restore session if token exists
+    if (authToken && currentUser) {
+        try {
+            const r = await fetch('/api/v1/auth/me', { headers: authHeaders() });
+            if (r.ok) { onAuthSuccess(); }
+            else { doLogout(); }
+        } catch { doLogout(); }
+    }
     render();
     logMsg('info', '🚀 ', { t: 'Car Pooling Service', c: 'hi-car' }, ' — ' + t('log.init'));
     logMsg('debug', '   ' + t('log.waitingFleet'));

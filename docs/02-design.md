@@ -1,8 +1,8 @@
-# 🏗️ Diseño y Arquitectura
+# 🏗️ Design and Architecture
 
-## 1. Visión general
+## 1. Overview
 
-El servicio sigue una arquitectura en **3 capas** con Spring Boot 3.2.5 y Java 21:
+The service follows a **3-layer architecture** with Spring Boot 3.2.5 and Java 21:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -13,20 +13,20 @@ El servicio sigue una arquitectura en **3 capas** con Spring Boot 3.2.5 y Java 2
 │              CarPoolingController                        │
 │       DTOs (request) ←──→ DTOs (response)               │
 ├─────────────────────────────────────────────────────────┤
-│                  Capa de Servicio                        │
+│                  Service Layer                           │
 │              CarPoolingService                           │
-│         @Transactional — Lógica de negocio              │
+│         @Transactional — Business logic                  │
 ├─────────────────────────────────────────────────────────┤
-│                Capa de Persistencia                      │
+│                Persistence Layer                         │
 │        CarRepository   JourneyRepository                │
 │              Spring Data JPA                             │
 ├─────────────────────────────────────────────────────────┤
-│                  Base de Datos                           │
+│                    Database                              │
 │          PostgreSQL (prod) / H2 (test)                   │
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 2. Estructura de paquetes
+## 2. Package Structure
 
 ```
 com.carpooling
@@ -35,45 +35,45 @@ com.carpooling
 │   └── CarPoolingController.java       # REST endpoints
 ├── dto
 │   ├── request
-│   │   ├── CarRequestDTO.java          # Record con validaciones
-│   │   └── JourneyRequestDTO.java      # Record con validaciones
+│   │   ├── CarRequestDTO.java          # Record with validations
+│   │   └── JourneyRequestDTO.java      # Record with validations
 │   └── response
-│       ├── CarResponseDTO.java         # Record con factory fromDomain()
-│       └── ErrorResponseDTO.java       # Respuesta de error consistente
+│       ├── CarResponseDTO.java         # Record with fromDomain() factory
+│       └── ErrorResponseDTO.java       # Consistent error response
 ├── exception
 │   ├── GlobalExceptionHandler.java     # @RestControllerAdvice (7 handlers)
 │   ├── GroupNotFoundException.java     # → 404
 │   └── DuplicateGroupException.java   # → 409
 ├── model
-│   ├── Car.java                        # @Entity — vehículo
-│   └── Journey.java                    # @Entity — grupo de viaje
+│   ├── Car.java                        # @Entity — vehicle
+│   └── Journey.java                    # @Entity — journey group
 ├── repository
 │   ├── CarRepository.java              # JpaRepository<Car, Integer>
 │   └── JourneyRepository.java          # JpaRepository<Journey, Integer>
 └── service
-    └── CarPoolingService.java          # Lógica de negocio
+    └── CarPoolingService.java          # Business logic
 ```
 
-## 3. Diseño REST API
+## 3. REST API Design
 
 Base path: `/api/v1`
 
-| Método | Endpoint | Descripción | Request | Response |
+| Method | Endpoint | Description | Request | Response |
 |--------|----------|-------------|---------|----------|
 | `GET` | `/status` | Health check | — | `200` |
-| `PUT` | `/cars` | Cargar flota | `List<CarRequestDTO>` | `200` / `400` |
-| `POST` | `/journeys` | Registrar grupo | `JourneyRequestDTO` | `201` / `400` / `409` |
+| `PUT` | `/cars` | Load fleet | `List<CarRequestDTO>` | `200` / `400` |
+| `POST` | `/journeys` | Register group | `JourneyRequestDTO` | `201` / `400` / `409` |
 | `DELETE` | `/journeys/{id}` | Dropoff | Path: `id` (positive int) | `204` / `400` / `404` |
-| `GET` | `/journeys/{id}/car` | Localizar coche | Path: `id` (positive int) | `200` + `CarResponseDTO` / `204` / `404` |
+| `GET` | `/journeys/{id}/car` | Locate car | Path: `id` (positive int) | `200` + `CarResponseDTO` / `204` / `404` |
 
-### Convenciones REST aplicadas
-- **Sustantivos plurales** en endpoints (`/cars`, `/journeys`)
-- **Verbos HTTP correctos**: GET (leer), POST (crear), PUT (reemplazar), DELETE (eliminar)
-- **Versionado** en URL (`/api/v1`)
-- **DTOs separados** de las entidades de dominio
-- **Códigos HTTP semánticos**: 201 Created, 204 No Content, 400 Bad Request, 404 Not Found, 405 Method Not Allowed, 409 Conflict
+### REST Conventions Applied
+- **Plural nouns** in endpoints (`/cars`, `/journeys`)
+- **Correct HTTP verbs**: GET (read), POST (create), PUT (replace), DELETE (remove)
+- **URL versioning** (`/api/v1`)
+- **DTOs separated** from domain entities
+- **Semantic HTTP codes**: 201 Created, 204 No Content, 400 Bad Request, 404 Not Found, 405 Method Not Allowed, 409 Conflict
 
-## 4. Modelo de datos
+## 4. Data Model
 
 ```
 ┌──────────────┐         ┌──────────────────┐
@@ -86,49 +86,49 @@ Base path: `/api/v1`
 └──────────────┘         └──────────────────┘
 ```
 
-- **Car**: `id` (PK), `seats` (4-6), `availableSeats` (se actualiza al asignar/liberar)
-- **Journey**: `id` (PK), `people` (1-6), `assignedCar` (FK nullable), `createdAt` (para orden FIFO)
-- Un Journey con `assignedCar = NULL` está en cola de espera.
+- **Car**: `id` (PK), `seats` (4-6), `availableSeats` (updated on assign/release)
+- **Journey**: `id` (PK), `people` (1-6), `assignedCar` (FK nullable), `createdAt` (for FIFO ordering)
+- A Journey with `assignedCar = NULL` is in the waiting queue.
 
-## 5. Algoritmo de asignación
+## 5. Assignment Algorithm
 
 ```
 addJourney(group):
-  1. Verificar que el ID no existe (→ 409 si duplicado)
-  2. Persistir el journey en BD
-  3. Buscar primer coche con availableSeats >= group.people (ORDER BY id ASC)
-  4. Si encontrado → occupy(people), asignar coche al journey
-  5. Si no → queda en cola (assignedCar = NULL)
+  1. Verify ID does not exist (→ 409 if duplicate)
+  2. Persist journey in DB
+  3. Find first car with availableSeats >= group.people (ORDER BY id ASC)
+  4. If found → occupy(people), assign car to journey
+  5. If not → stays in queue (assignedCar = NULL)
 
 dropoff(groupId):
-  1. Buscar journey por ID (→ 404 si no existe)
-  2. Si tenía coche → release(people), liberar asientos
-  3. Eliminar journey de BD
-  4. Si liberó asientos → reassignWaiting()
+  1. Find journey by ID (→ 404 if not found)
+  2. If had car → release(people), free seats
+  3. Delete journey from DB
+  4. If seats were freed → reassignWaiting()
 
 reassignWaiting():
-  1. Obtener cola de espera ORDER BY createdAt ASC
-  2. Para cada grupo esperando:
-     - Buscar coche con suficientes asientos
-     - Si encontrado → asignar
-     - Si no → sigue esperando
+  1. Get waiting queue ORDER BY createdAt ASC
+  2. For each waiting group:
+     - Find car with enough seats
+     - If found → assign
+     - If not → keep waiting
 ```
 
-## 6. Manejo de errores
+## 6. Error Handling
 
-El `GlobalExceptionHandler` (@RestControllerAdvice) captura 7 tipos de excepción:
+The `GlobalExceptionHandler` (@RestControllerAdvice) catches 7 exception types:
 
-| Excepción | HTTP | Cuándo |
+| Exception | HTTP | When |
 |---|---|---|
-| `GroupNotFoundException` | 404 | Grupo no encontrado |
-| `DuplicateGroupException` | 409 | ID de grupo duplicado |
-| `MethodArgumentNotValidException` | 400 | `@Valid` en `@RequestBody` falla |
-| `ConstraintViolationException` | 400 | `@Positive`/`@NotEmpty` en params falla |
-| `MethodArgumentTypeMismatchException` | 400 | Path variable no numérica |
-| `HttpRequestMethodNotSupportedException` | 405 | Verbo HTTP incorrecto |
-| `HttpMessageNotReadableException` | 400 | JSON mal formado |
+| `GroupNotFoundException` | 404 | Group not found |
+| `DuplicateGroupException` | 409 | Duplicate group ID |
+| `MethodArgumentNotValidException` | 400 | `@Valid` on `@RequestBody` fails |
+| `ConstraintViolationException` | 400 | `@Positive`/`@NotEmpty` on params fails |
+| `MethodArgumentTypeMismatchException` | 400 | Non-numeric path variable |
+| `HttpRequestMethodNotSupportedException` | 405 | Wrong HTTP verb |
+| `HttpMessageNotReadableException` | 400 | Malformed JSON |
 
-Formato de error consistente:
+Consistent error format:
 ```json
 {
   "status": 400,
@@ -138,23 +138,23 @@ Formato de error consistente:
 }
 ```
 
-## 7. Internacionalización (i18n)
+## 7. Internationalization (i18n)
 
-- 4 ficheros JSON en `/static/i18n/`: `es.json`, `en.json`, `fr.json`, `de.json`
-- ~80 claves por idioma
-- Carga asíncrona al inicio (`preloadLanguages()`)
-- Atributo `data-i18n` en HTML para traducción automática
-- Idioma guardado en `localStorage`
+- 4 JSON files in `/static/i18n/`: `es.json`, `en.json`, `fr.json`, `de.json`
+- ~80 keys per language
+- Async loading at startup (`preloadLanguages()`)
+- `data-i18n` attribute in HTML for automatic translation
+- Language saved in `localStorage`
 
 ## 8. Frontend (SPA)
 
-Single Page Application embebida en `index.html` (~32KB):
+Single Page Application embedded in `index.html` (~32KB):
 
-| Sección | Descripción |
+| Section | Description |
 |---|---|
-| **Sidebar** | Formularios: cargar flota, registrar grupo, localizar/dropoff |
-| **Stats** | 4 tarjetas: coches, asientos libres, viajes activos, en espera |
-| **Fleet grid** | Visualización de coches con asientos ocupados/libres |
-| **Waiting queue** | Grupos en cola con icono de personas |
-| **Log console** | Trazas en tiempo real con filtros ALL/INFO/WARN/ERROR/DEBUG |
-| **Toasts** | Notificaciones popup para éxito/error con mensajes amigables |
+| **Sidebar** | Forms: load fleet, register group, locate/dropoff |
+| **Stats** | 4 cards: cars, free seats, active journeys, waiting |
+| **Fleet grid** | Car visualization with occupied/free seats |
+| **Waiting queue** | Queued groups with people icon |
+| **Log console** | Real-time traces with ALL/INFO/WARN/ERROR/DEBUG filters |
+| **Toasts** | Popup notifications for success/error with friendly messages |

@@ -1,44 +1,44 @@
-# 👤 Manual de Usuario
+# 👤 User Manual
 
-## 1. Acceso a la aplicación
+## 1. Accessing the Application
 
-Abre un navegador y navega a:
+Open a browser and navigate to:
 - **Local**: `http://localhost:8080`
 - **Docker**: `http://localhost:8080`
 - **Render**: `https://car-pooling-service.onrender.com`
 
-## 2. Interfaz principal
+## 2. Main Interface
 
-La interfaz se divide en 4 zonas:
+The interface is divided into 4 zones:
 
 ```
 ┌────────────────────────────────────────────────────┐
-│  🚗 Car Pooling Service    [🇪🇸 ES][🇬🇧 EN]  ● Online │  ← Cabecera
+│  🚗 Car Pooling Service    [🇪🇸 ES][🇬🇧 EN]  ● Online │  ← Header
 ├─────────────┬──────────────────────────────────────┤
-│  Formularios│   Estadísticas + Flota + Cola        │  ← Zona principal
+│    Forms    │   Statistics + Fleet + Queue          │  ← Main area
 │             │                                      │
 ├─────────────┴──────────────────────────────────────┤
-│  🖥 Consola de trazas                              │  ← Log
+│  🖥 Log Console                                    │  ← Log
 └────────────────────────────────────────────────────┘
 ```
 
-### 2.1 Indicador de estado
+### 2.1 Status Indicator
 
-En la esquina superior derecha hay un badge que indica:
-- 🟢 **Online** — El servicio responde correctamente
-- 🔴 **Offline** — No se puede conectar al servicio
+In the upper-right corner, a badge indicates:
+- 🟢 **Online** — The service is responding correctly
+- 🔴 **Offline** — Cannot connect to the service
 
-### 2.2 Selector de idioma
+### 2.2 Language Selector
 
-Botones en la cabecera: 🇪🇸 ES | 🇬🇧 EN | 🇫🇷 FR | 🇩🇪 DE. El idioma se guarda automáticamente.
+Buttons in the header: 🇪🇸 ES | 🇬🇧 EN | 🇫🇷 FR | 🇩🇪 DE. The language is saved automatically.
 
-## 3. Operaciones
+## 3. Operations
 
-### 3.1 Cargar flota de coches
+### 3.1 Load Car Fleet
 
-1. En el panel **🚘 Cargar flota**, edita el JSON con los coches.
-2. Cada coche necesita `id` (entero) y `seats` (4, 5 o 6).
-3. Pulsa **⬆ Cargar coches**.
+1. In the **🚘 Load Fleet** panel, edit the JSON with the cars.
+2. Each car needs `id` (integer) and `seats` (4, 5, or 6).
+3. Click **⬆ Load Cars**.
 
 ```json
 [
@@ -48,85 +48,85 @@ Botones en la cabecera: 🇪🇸 ES | 🇬🇧 EN | 🇫🇷 FR | 🇩🇪 DE. E
 ]
 ```
 
-> ⚠️ Cargar una flota nueva **elimina todos los viajes y coches previos**.
+> ⚠️ Loading a new fleet **deletes all previous journeys and cars**.
 
-### 3.2 Registrar un grupo de viaje
+### 3.2 Register a Journey Group
 
-1. En el panel **🧑‍🤝‍🧑 Nuevo viaje**, introduce:
-   - **ID del grupo**: número positivo único
-   - **Personas**: de 1 a 6
-2. Pulsa **➕ Solicitar viaje**.
+1. In the **🧑‍🤝‍🧑 New Journey** panel, enter:
+   - **Group ID**: unique positive number
+   - **People**: from 1 to 6
+2. Click **➕ Request Journey**.
 
-Resultado posible:
-- ✅ **Asignado** — El grupo aparece en un coche de la flota.
-- ⏳ **En espera** — No hay coche disponible; aparece en la cola.
-- ❌ **Error** — ID duplicado, datos inválidos, etc.
+Possible outcomes:
+- ✅ **Assigned** — The group appears in a car in the fleet.
+- ⏳ **Waiting** — No car available; appears in the queue.
+- ❌ **Error** — Duplicate ID, invalid data, etc.
 
-### 3.3 Localizar un grupo
+### 3.3 Locate a Group
 
-1. En el panel **🔍 Localizar / Abandonar**, introduce el ID del grupo.
-2. Pulsa **📍 Localizar**.
+1. In the **🔍 Locate / Dropoff** panel, enter the group ID.
+2. Click **📍 Locate**.
 
-Resultado:
-- Se muestra el coche asignado (ID y asientos).
-- Si el grupo está en espera, se informa que no tiene coche.
-- Si el grupo no existe, aparece error.
+Result:
+- Shows the assigned car (ID and seats).
+- If the group is waiting, it reports no car assigned.
+- If the group does not exist, an error appears.
 
-### 3.4 Abandonar (dropoff)
+### 3.4 Dropoff
 
-1. En el panel **🔍 Localizar / Abandonar**, introduce el ID del grupo.
-2. Pulsa **🚪 Abandonar**.
+1. In the **🔍 Locate / Dropoff** panel, enter the group ID.
+2. Click **🚪 Dropoff**.
 
-Resultado:
-- El grupo se elimina del sistema.
-- Si tenía coche, los asientos se liberan.
-- Los grupos en cola se reasignan automáticamente si hay sitio.
+Result:
+- The group is removed from the system.
+- If it had a car, the seats are freed.
+- Waiting groups are automatically reassigned if space is available.
 
-## 4. Panel de estadísticas
+## 4. Statistics Panel
 
-| Tarjeta | Significado |
+| Card | Meaning |
 |---|---|
-| 🔵 **Coches** | Total de coches en la flota |
-| 🟢 **Asientos libres** | Asientos disponibles en toda la flota |
-| 🟣 **Viajes activos** | Grupos con coche asignado |
-| 🟠 **En espera** | Grupos en cola sin coche |
+| 🔵 **Cars** | Total cars in the fleet |
+| 🟢 **Free Seats** | Available seats across the entire fleet |
+| 🟣 **Active Journeys** | Groups with an assigned car |
+| 🟠 **Waiting** | Groups in queue without a car |
 
-## 5. Visualización de la flota
+## 5. Fleet Visualization
 
-Cada coche se muestra como una tarjeta con:
-- ID del coche y número de asientos
-- Iconos de asientos: 🟢 libre, 🔵 ocupado
-- Lista de grupos asignados al coche
+Each car is displayed as a card with:
+- Car ID and number of seats
+- Seat icons: 🟢 free, 🔵 occupied
+- List of groups assigned to the car
 
-## 6. Cola de espera
+## 6. Waiting Queue
 
-Muestra los grupos que esperan coche, en orden de llegada, con el número de personas.
+Shows groups waiting for a car, in arrival order, with the number of people.
 
-## 7. Consola de trazas
+## 7. Log Console
 
-La consola inferior muestra el log de operaciones en tiempo real:
+The bottom console shows the operation log in real time:
 
-- **Filtros**: ALL | Info | Warn | Error | Debug
-- **Auto-scroll**: activa/desactiva el scroll automático al fondo
-- **🗑 Limpiar**: borra todas las trazas
+- **Filters**: ALL | Info | Warn | Error | Debug
+- **Auto-scroll**: toggle automatic scrolling to the bottom
+- **🗑 Clear**: clears all traces
 
-Los niveles de log:
-| Nivel | Color | Ejemplo |
+Log levels:
+| Level | Color | Example |
 |---|---|---|
-| **INFO** | Azul | Operaciones exitosas (carga, asignación, dropoff) |
-| **WARN** | Amarillo | Grupo en cola, duplicado rechazado |
-| **ERROR** | Rojo | Errores de conexión, respuestas inesperadas |
-| **DEBUG** | Gris | Detalle de asientos, localización |
+| **INFO** | Blue | Successful operations (load, assignment, dropoff) |
+| **WARN** | Yellow | Group queued, duplicate rejected |
+| **ERROR** | Red | Connection errors, unexpected responses |
+| **DEBUG** | Gray | Seat details, locate calls |
 
-## 8. Mensajes de error (popups)
+## 8. Error Messages (popups)
 
-Los errores se muestran como notificaciones toast en la esquina superior derecha:
+Errors are shown as toast notifications in the upper-right corner:
 
-| Situación | Mensaje |
+| Situation | Message |
 |---|---|
-| ID de grupo duplicado | "El grupo con ID X ya está registrado" |
-| Grupo no encontrado | "Grupo no encontrado" |
-| Asientos fuera de rango | "Seats must be at least 4" |
-| Personas fuera de rango | "People must be at least 1" |
-| JSON mal formado | "Error en el formato del JSON" |
-| Servicio caído | "Error de conexión" |
+| Duplicate group ID | "Group with ID X is already registered" |
+| Group not found | "Group not found" |
+| Seats out of range | "Seats must be at least 4" |
+| People out of range | "People must be at least 1" |
+| Malformed JSON | "Error in JSON format" |
+| Service down | "Connection error" |

@@ -1,142 +1,142 @@
-# 🧪 Guía de Pruebas
+# 🧪 Testing Guide
 
-## 1. Resumen
+## 1. Summary
 
-| Suite | Clase | Tests | Tipo | Descripción |
+| Suite | Class | Tests | Type | Description |
 |---|---|---|---|---|
-| **Service** | `CarPoolingServiceTest` | 23 | Integración (Spring + H2) | Lógica de negocio |
-| **Controller** | `CarPoolingControllerTest` | 16 | Integración (MockMvc + H2) | Endpoints REST |
-| **Application** | `CarPoolingApplicationTests` | 1 | Contexto | Arranque de Spring Boot |
+| **Service** | `CarPoolingServiceTest` | 23 | Integration (Spring + H2) | Business logic |
+| **Controller** | `CarPoolingControllerTest` | 16 | Integration (MockMvc + H2) | REST endpoints |
+| **Application** | `CarPoolingApplicationTests` | 1 | Context | Spring Boot startup |
 | **Total** | — | **40** | — | — |
 
-## 2. Ejecutar tests
+## 2. Running Tests
 
 ```bash
-# Todos los tests
+# All tests
 mvn test
 
-# Una clase específica
+# A specific class
 mvn test -Dtest=CarPoolingServiceTest
 
-# Un test específico
+# A specific test
 mvn test -Dtest=CarPoolingServiceTest#dropoffFreesSeatsAndReassignsWaiting
 ```
 
-## 3. Configuración de tests
+## 3. Test Configuration
 
-Los tests usan **H2 en memoria** (`src/test/resources/application.properties`):
-- No necesitan PostgreSQL instalado
-- La BD se crea y destruye en cada ejecución (`create-drop`)
-- Los tests de servicio usan `@SpringBootTest` con inyección del servicio real
+Tests use **H2 in-memory** (`src/test/resources/application.properties`):
+- No PostgreSQL installation needed
+- The database is created and destroyed on each run (`create-drop`)
+- Service tests use `@SpringBootTest` with real service injection
 
-## 4. Tests del servicio (`CarPoolingServiceTest`)
+## 4. Service Tests (`CarPoolingServiceTest`)
 
-### Carga de flota (loadCars)
-| Test | Verifica |
+### Fleet Loading (loadCars)
+| Test | Verifies |
 |---|---|
-| `loadCarsResetsAllState` | Cargar coches elimina todos los viajes previos |
-| `loadCarsWithMultipleCalls` | Se puede cargar flota varias veces seguidas |
+| `loadCarsResetsAllState` | Loading cars deletes all previous journeys |
+| `loadCarsWithMultipleCalls` | Fleet can be loaded multiple times in a row |
 
-### Asignación de viajes (addJourney + locate)
-| Test | Verifica |
+### Journey Assignment (addJourney + locate)
+| Test | Verifies |
 |---|---|
-| `journeyIsAssignedToFirstCarWithEnoughSeats` | Se asigna al primer coche disponible |
-| `journeyGoesToSecondCarIfFirstIsFull` | Si el primero está lleno, usa el siguiente |
-| `journeyGoesToWaitingQueueWhenNoCarsAvailable` | Sin coches libres → cola de espera |
-| `singlePersonAssignedSuccessfully` | Un grupo de 1 persona se asigna correctamente |
-| `groupOfSixAssignedToCarWithSixSeats` | Un grupo de 6 va al coche de 6 asientos |
-| `multipleSmallGroupsShareSameCar` | Dos grupos pequeños comparten coche |
+| `journeyIsAssignedToFirstCarWithEnoughSeats` | Assigned to the first available car |
+| `journeyGoesToSecondCarIfFirstIsFull` | If first is full, uses the next one |
+| `journeyGoesToWaitingQueueWhenNoCarsAvailable` | No free cars → waiting queue |
+| `singlePersonAssignedSuccessfully` | A group of 1 person is assigned correctly |
+| `groupOfSixAssignedToCarWithSixSeats` | A group of 6 goes to the 6-seat car |
+| `multipleSmallGroupsShareSameCar` | Two small groups share the same car |
 
-### Abandono (dropoff)
-| Test | Verifica |
+### Dropoff
+| Test | Verifies |
 |---|---|
-| `dropoffExistingJourneyReturnsTrue` | Dropoff de grupo existente devuelve true |
-| `dropoffNonExistentJourneyReturnsFalse` | Dropoff de grupo inexistente devuelve false |
-| `dropoffFreesSeatsAndReassignsWaiting` | Libera asientos y reasigna cola |
-| `dropoffWaitingGroupRemovesFromQueue` | Elimina grupo de la cola sin reasignar |
-| `dropoffGroupThenLocateThrowsNotFound` | Tras dropoff, locate lanza excepción |
+| `dropoffExistingJourneyReturnsTrue` | Dropoff of existing group returns true |
+| `dropoffNonExistentJourneyReturnsFalse` | Dropoff of non-existent group returns false |
+| `dropoffFreesSeatsAndReassignsWaiting` | Frees seats and reassigns queue |
+| `dropoffWaitingGroupRemovesFromQueue` | Removes group from queue without reassigning |
+| `dropoffGroupThenLocateThrowsNotFound` | After dropoff, locate throws exception |
 
-### Localización (locate)
-| Test | Verifica |
+### Locate
+| Test | Verifies |
 |---|---|
-| `locateUnknownGroupThrowsNotFound` | Grupo inexistente → `GroupNotFoundException` |
-| `locateWaitingGroupReturnsEmptyOptional` | Grupo en espera → `Optional.empty()` |
-| `locateAssignedGroupReturnsCarWithCorrectSeats` | Grupo asignado → coche correcto |
+| `locateUnknownGroupThrowsNotFound` | Non-existent group → `GroupNotFoundException` |
+| `locateWaitingGroupReturnsEmptyOptional` | Waiting group → `Optional.empty()` |
+| `locateAssignedGroupReturnsCarWithCorrectSeats` | Assigned group → correct car |
 
-### Equidad (fairness)
-| Test | Verifica |
+### Fairness
+| Test | Verifies |
 |---|---|
-| `smallerGroupServedBeforeLargerWhenLargerCannotFit` | Grupo pequeño se sirve antes si el grande no cabe |
-| `earlierGroupServedFirstWhenBothCanFit` | Orden FIFO cuando ambos caben |
-| `multipleWaitingGroupsReassignedAfterDropoff` | Múltiples grupos reasignados en cascada |
-| `waitingGroupNotReassignedIfStillNoSpace` | Grupo no reasignado si sigue sin espacio |
+| `smallerGroupServedBeforeLargerWhenLargerCannotFit` | Smaller group served first if larger can't fit |
+| `earlierGroupServedFirstWhenBothCanFit` | FIFO order when both fit |
+| `multipleWaitingGroupsReassignedAfterDropoff` | Multiple groups reassigned in cascade |
+| `waitingGroupNotReassignedIfStillNoSpace` | Group not reassigned if still no space |
 
-### Casos límite
-| Test | Verifica |
+### Edge Cases
+| Test | Verifies |
 |---|---|
-| `addDuplicateJourneyThrowsException` | ID duplicado → `DuplicateGroupException` |
-| `dropoffTwiceReturnsFalseSecondTime` | Doble dropoff → false la segunda vez |
-| `loadCarsAfterJourneysResetsEverything` | Reset completo tras cargar nueva flota |
+| `addDuplicateJourneyThrowsException` | Duplicate ID → `DuplicateGroupException` |
+| `dropoffTwiceReturnsFalseSecondTime` | Double dropoff → false the second time |
+| `loadCarsAfterJourneysResetsEverything` | Complete reset after loading new fleet |
 
-## 5. Tests del controlador (`CarPoolingControllerTest`)
+## 5. Controller Tests (`CarPoolingControllerTest`)
 
-### Endpoints básicos
-| Test | Endpoint | Status | Verifica |
+### Basic Endpoints
+| Test | Endpoint | Status | Verifies |
 |---|---|---|---|
 | `statusReturns200` | `GET /status` | 200 | Health check |
-| `loadCarsReturns200` | `PUT /cars` | 200 | Carga exitosa |
-| `journeyAssignsCar` | `POST /journeys` + `GET .../car` | 201, 200 | Asignación completa |
-| `journeyGoesToWaitingQueue` | `GET .../car` | 204 | En espera |
-| `dropoffFreesSeatsAndAssignsWaiting` | `DELETE /journeys/{id}` | 204 | Reasignación |
+| `loadCarsReturns200` | `PUT /cars` | 200 | Successful load |
+| `journeyAssignsCar` | `POST /journeys` + `GET .../car` | 201, 200 | Full assignment |
+| `journeyGoesToWaitingQueue` | `GET .../car` | 204 | Waiting state |
+| `dropoffFreesSeatsAndAssignsWaiting` | `DELETE /journeys/{id}` | 204 | Reassignment |
 
-### Errores y validaciones
-| Test | Endpoint | Status | Verifica |
+### Validation and Errors
+| Test | Endpoint | Status | Verifies |
 |---|---|---|---|
-| `loadCarsRejects7Seats` | `PUT /cars` | 400 | Asientos > 6 rechazados |
-| `dropoffOfUnknownGroupReturns404` | `DELETE /journeys/999` | 404 | Grupo inexistente |
-| `locateOfUnknownGroupReturns404` | `GET /journeys/999/car` | 404 | Grupo inexistente |
-| `journeyRejectsPeopleOutOfRange` | `POST /journeys` | 400 | people=0 y people=7 |
-| `duplicateJourneyReturns409` | `POST /journeys` | 409 | ID duplicado |
-| `nonNumericPathVariableReturns400` | `GET /journeys/abc/car` | 400 | Tipo incorrecto |
-| `negativePathVariableReturns400` | `DELETE /journeys/-5` | 400 | ID negativo |
-| `emptyCarListReturns400` | `PUT /cars` con `[]` | 400 | Lista vacía |
-| `wrongHttpMethodReturns405` | `POST /status` | 405 | Verbo HTTP incorrecto |
+| `loadCarsRejects7Seats` | `PUT /cars` | 400 | Seats > 6 rejected |
+| `dropoffOfUnknownGroupReturns404` | `DELETE /journeys/999` | 404 | Non-existent group |
+| `locateOfUnknownGroupReturns404` | `GET /journeys/999/car` | 404 | Non-existent group |
+| `journeyRejectsPeopleOutOfRange` | `POST /journeys` | 400 | people=0 and people=7 |
+| `duplicateJourneyReturns409` | `POST /journeys` | 409 | Duplicate ID |
+| `nonNumericPathVariableReturns400` | `GET /journeys/abc/car` | 400 | Wrong type |
+| `negativePathVariableReturns400` | `DELETE /journeys/-5` | 400 | Negative ID |
+| `emptyCarListReturns400` | `PUT /cars` with `[]` | 400 | Empty list |
+| `wrongHttpMethodReturns405` | `POST /status` | 405 | Wrong HTTP verb |
 
-### Equidad (fairness)
-| Test | Verifica |
+### Fairness
+| Test | Verifies |
 |---|---|
-| `fairnessSmallGroupServedBeforeLargeWhenNoCarForLarge` | Reasignación respeta las reglas |
-| `dropoffOfWaitingGroupRemovesFromQueue` | Grupo eliminado de cola correctamente |
+| `fairnessSmallGroupServedBeforeLargeWhenNoCarForLarge` | Reassignment respects rules |
+| `dropoffOfWaitingGroupRemovesFromQueue` | Group correctly removed from queue |
 
-## 6. Matriz de cobertura
+## 6. Coverage Matrix
 
-| Funcionalidad | Service | Controller | Total |
+| Feature | Service | Controller | Total |
 |---|---|---|---|
-| Carga de flota | 2 | 2 | 4 |
-| Registro de viajes | 6 | 2 | 8 |
+| Fleet loading | 2 | 2 | 4 |
+| Journey registration | 6 | 2 | 8 |
 | Dropoff | 5 | 4 | 9 |
-| Localización | 3 | 2 | 5 |
-| Equidad (fairness) | 4 | 1 | 5 |
-| Validaciones | 1 | 6 | 7 |
-| Casos límite | 2 | — | 2 |
+| Locate | 3 | 2 | 5 |
+| Fairness | 4 | 1 | 5 |
+| Validations | 1 | 6 | 7 |
+| Edge cases | 2 | — | 2 |
 | **Total** | **23** | **16+1** | **40** |
 
-## 7. Añadir nuevos tests
+## 7. Adding New Tests
 
-Para añadir un test de servicio:
+To add a service test:
 ```java
 @Test
-void miNuevoTest() {
+void myNewTest() {
     service.loadCars(List.of(new Car(1, 4)));
     service.addJourney(new Journey(1, 3));
     // asserts...
 }
 ```
 
-Para añadir un test de controlador:
+To add a controller test:
 ```java
 @Test
-void miNuevoTestEndpoint() throws Exception {
+void myNewEndpointTest() throws Exception {
     mockMvc.perform(post("/api/v1/journeys")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"id\":1,\"people\":3}"))

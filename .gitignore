@@ -1,6 +1,11 @@
 # Build
 target/
 
+# Node (used for docx generation only)
+node_modules/
+package.json
+package-lock.json
+
 # IDE
 .idea/
 *.iml

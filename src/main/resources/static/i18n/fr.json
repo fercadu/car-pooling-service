@@ -83,5 +83,17 @@
   "toast.serverError": "Erreur du serveur",
   "toast.invalidSeats": "Les sièges doivent être entre 4 et 6",
   "toast.emptyCarList": "La liste de voitures ne peut pas être vide",
-  "toast.methodNotAllowed": "Méthode HTTP non autorisée"
+  "toast.methodNotAllowed": "Méthode HTTP non autorisée",
+
+  "auth.loginTab": "Connexion",
+  "auth.registerTab": "S'inscrire",
+  "auth.username": "Nom d'utilisateur",
+  "auth.password": "Mot de passe",
+  "auth.email": "E-mail",
+  "auth.loginBtn": "Se connecter",
+  "auth.registerBtn": "S'inscrire",
+  "auth.logout": "Déconnexion",
+  "auth.fieldsRequired": "Nom d'utilisateur et mot de passe requis",
+  "auth.invalidCredentials": "Nom d'utilisateur ou mot de passe invalide",
+  "auth.loggedIn": "connecté"
 }
